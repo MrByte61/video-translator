@@ -2,38 +2,35 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>VoiceOver Ultra Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceOver Ultra</title>
     <style>
         :root { --accent: #00f2ff; --bg: #09090b; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         
+        .hosting-warning { width: 100%; max-width: 600px; background: #7f1d1d; color: #fca5a5; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; margin-bottom: 15px; display: none; border: 1px solid #b91c1c; }
+
         .main-input { display: flex; gap: 10px; margin: 20px 0 30px 0; width: 100%; max-width: 600px; }
         input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #27272a; background: #18181b; color: white; outline: none; font-size: 1rem; }
         .go-btn { background: var(--accent); border: none; padding: 0 25px; border-radius: 12px; font-weight: bold; cursor: pointer; color: black; transition: 0.2s; }
         .go-btn:hover { filter: brightness(1.1); }
 
-        /* Профессиональный контейнер плеера */
         .player-box {
             width: 100%; max-width: 950px; background: #000; border-radius: 20px;
             position: relative; overflow: hidden; border: 1px solid #27272a; aspect-ratio: 16/9;
             box-shadow: 0 20px 40px rgba(0,0,0,0.7);
         }
 
-        /* Полный экран для API */
         .player-box:fullscreen { width: 100vw; height: 100vh; max-width: none; border-radius: 0; border: none; }
-
         .video-wrapper { width: 100%; height: 100%; position: relative; }
         
-        /* Прячем вотермарки и элементы управления ютуба за края */
         #yt-player { 
             position: absolute; top: -5%; left: -1%; width: 102%; height: 110%; 
             pointer-events: none; 
         }
 
-        /* Интерактивный оверлей для кликов */
         .click-layer { position: absolute; inset: 0; z-index: 5; cursor: pointer; }
 
-        /* Панель управления */
         .controls-panel {
             position: absolute; bottom: 0; left: 0; right: 0;
             background: linear-gradient(transparent, rgba(0,0,0,0.95));
@@ -41,7 +38,7 @@
             opacity: 0; transition: opacity 0.3s; z-index: 10;
         }
         .player-box:hover .controls-panel { opacity: 1; }
-        .player-box:fullscreen .controls-panel { bottom: 10px; }
+        .player-box:fullscreen .controls-panel { bottom: 15px; }
 
         .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.2); cursor: pointer; border-radius: 3px; }
         .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 3px; box-shadow: 0 0 8px var(--accent); }
@@ -59,10 +56,12 @@
 </head>
 <body>
 
+    <div class="hosting-warning" id="hostWarn">⚠️ ВНИМАНИЕ: Ты открыл сайт через GitHub Pages! Перевод работать не будет. Открой сайт через ссылку Vercel (.vercel.app)</div>
+
     <h1 style="letter-spacing: 4px; margin-top: 20px; font-size: 1.8rem;">VOICEOVER <span style="color:var(--accent)">ULTRA</span></h1>
 
     <div class="main-input">
-        <input type="text" id="urlInput" placeholder="Вставь ссылку на англоязычное видео...">
+        <input type="text" id="urlInput" placeholder="Вставь ссылку на видео с YouTube...">
         <button class="go-btn" onclick="buildPlayer()">ЗАПУСТИТЬ</button>
     </div>
 
@@ -79,7 +78,7 @@
                     <button class="btn" onclick="togglePlayState()" id="masterPlayBtn">▶</button>
                     <input type="range" class="volume" min="0" max="100" value="100" oninput="player.setVolume(this.value)">
                     
-                    <div id="statusLabel" class="status-text">Ожидание потока...</div>
+                    <div id="statusLabel" class="status-text">Ожидание...</div>
 
                     <div class="right-menu">
                         <select onchange="setVideoQuality(this.value)">
@@ -101,6 +100,10 @@
         const speechEngine = window.speechSynthesis;
         let russianVoice = null;
 
+        if (window.location.hostname.includes('github.io')) {
+            document.getElementById('hostWarn').style.display = 'block';
+        }
+
         function findBestVoice() {
             const voices = speechEngine.getVoices();
             russianVoice = voices.find(v => v.lang.includes('ru') && v.name.includes('Pavel')) || 
@@ -110,8 +113,8 @@
 
         function buildPlayer() {
             const inputData = document.getElementById('urlInput').value;
-            const id = inputData.includes('v=') ? inputData.split('v=')[1].split('&')[0] : inputData.split('/').pop();
-            if(!id) return alert("Неверный URL");
+            const id = inputData.includes('v=') ? inputData.split('v=')[1].split('&')[0] : inputData.split('/').pop().split('?')[0];
+            if(!id) return alert("Некорректная ссылка!");
 
             document.getElementById('playerBox').style.display = 'block';
             
@@ -142,7 +145,7 @@
                     label.innerText = "ОШИБКА: " + data.msg;
                 }
             } catch(e) {
-                label.innerText = "СБОЙ СВЯЗИ С СЕРВЕРОМ";
+                label.innerText = "СБОЙ СВЯЗИ С РОБОТОМ (ПРОВЕРЬ ХОСТИНГ)";
             }
         }
 
@@ -150,11 +153,9 @@
             if(!player || !player.getCurrentTime) return;
             const currentTime = player.getCurrentTime();
             
-            // Плавное обновление таймлайна
             document.getElementById('pFill').style.width = (currentTime / player.getDuration() * 100) + '%';
             
-            // Поиск фразы под текущую секунду
-            const currentPhrase = subtitleTimeline.find(s => currentTime >= s.start && currentTime < s.start + 1.8);
+            const currentPhrase = subtitleTimeline.find(s => currentTime >= s.start && currentTime < s.start + 1.7);
             
             if(currentPhrase && currentPhrase.text !== lastSpokenText) {
                 lastSpokenText = currentPhrase.text;
@@ -164,7 +165,6 @@
 
         async function translateAndVoiceover(englishText) {
             try {
-                // Прямой бесплатный CORS-шлюз к Google Translate API
                 const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ru&dt=t&q=${encodeURIComponent(englishText)}`;
                 const response = await fetch(url);
                 const json = await response.json();
@@ -172,16 +172,16 @@
                 
                 executeVoice(russianText);
             } catch (err) {
-                console.error("Ошибка перевода фразы", err);
+                console.error("Ошибка перевода", err);
             }
         }
 
         function executeVoice(text) {
-            speechEngine.cancel(); // Глушим предыдущую фразу, чтобы не было наслоения
+            speechEngine.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.voice = russianVoice;
-            utterance.rate = 1.15; // Слегка ускоряем речь, чтобы укладываться в тайминги
-            utterance.pitch = 0.9;  // Немного баса для солидности
+            utterance.rate = 1.2;
+            utterance.pitch = 0.95; 
             speechEngine.speak(utterance);
         }
 

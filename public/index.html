@@ -2,82 +2,77 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceOver AI Pro</title>
+    <title>VoiceOver Ultra Pro</title>
     <style>
-        :root { --accent: #00f2ff; --bg: #050505; }
-        body { background: var(--bg); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        :root { --accent: #00f2ff; --bg: #0a0a0c; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         
-        .player-container {
-            width: 100%; max-width: 1000px; background: #000; border-radius: 20px;
-            position: relative; overflow: hidden; border: 1px solid #222;
+        /* Главный контейнер */
+        .player-box {
+            width: 90%; max-width: 1000px; background: #000; border-radius: 20px;
+            position: relative; overflow: hidden; border: 1px solid #222; aspect-ratio: 16/9;
         }
 
-        /* Прячем мусор от YouTube за границы видимости */
-        .video-viewport {
-            position: relative; width: 100%; aspect-ratio: 16/9; overflow: hidden;
+        /* Чтобы скрыть мусор Ютуба, чуть-чуть масштабируем само видео */
+        .video-container { width: 100%; height: 100%; overflow: hidden; position: relative; }
+        #yt-player { 
+            position: absolute; top: -2px; left: -2px; 
+            width: calc(100% + 4px); height: calc(100% + 4px); 
+            pointer-events: none; 
         }
-        #yt-player {
-            position: absolute;
-            top: -10%; left: -1%; width: 102%; height: 120%; /* Растягиваем, чтобы скрыть лого и титры Ютуба */
-            pointer-events: none;
+
+        .ui-overlay {
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            background: rgba(0,0,0,0); transition: 0.3s; z-index: 10;
         }
+        .ui-overlay:hover { background: rgba(0,0,0,0.3); }
 
         .controls {
-            position: absolute; bottom: 0; left: 0; right: 0;
+            margin-top: auto; padding: 20px; opacity: 0; transition: 0.3s;
             background: linear-gradient(transparent, rgba(0,0,0,0.9));
-            padding: 15px 20px; display: flex; flex-direction: column; gap: 10px;
-            opacity: 0; transition: 0.3s; z-index: 100;
         }
-        .player-container:hover .controls { opacity: 1; }
+        .ui-overlay:hover .controls { opacity: 1; }
 
-        .progress-bar { width: 100%; height: 5px; background: #333; cursor: pointer; border-radius: 5px; }
-        .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 5px; }
+        .progress-bar { width: 100%; height: 6px; background: #333; cursor: pointer; margin-bottom: 15px; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; box-shadow: 0 0 10px var(--accent); }
 
-        .btn-row { display: flex; align-items: center; gap: 15px; }
-        .btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
-        .btn:hover { color: var(--accent); }
+        .btn-row { display: flex; align-items: center; gap: 20px; }
+        .btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem; transition: 0.2s; }
+        .btn:hover { color: var(--accent); transform: scale(1.1); }
         
-        .right { margin-left: auto; display: flex; align-items: center; gap: 15px; }
-        select { background: #111; color: white; border: 1px solid #333; padding: 5px; border-radius: 5px; cursor: pointer; }
+        .status { font-size: 0.8rem; color: var(--accent); font-weight: bold; letter-spacing: 1px; }
+        .right-side { margin-left: auto; display: flex; align-items: center; gap: 15px; }
 
-        .main-input { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 600px; }
-        input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #111; color: white; }
-        .go-btn { background: var(--accent); border: none; padding: 0 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .main-input { display: flex; gap: 10px; margin-bottom: 30px; width: 100%; max-width: 600px; }
+        input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #111; color: white; outline: none; }
+        .go { background: var(--accent); border: none; padding: 0 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h2>VOICEOVER <span style="color:var(--accent)">ULTRA</span></h2>
+    <h1 style="letter-spacing: 5px;">VOICEOVER <span style="color:var(--accent)">ULTRA</span></h1>
 
     <div class="main-input">
-        <input type="text" id="url" placeholder="Ссылка на YouTube...">
-        <button class="go-btn" onclick="start()">ЗАПУСТИТЬ</button>
+        <input type="text" id="urlInput" placeholder="Вставь ссылку на видео...">
+        <button class="go" onclick="initApp()">СТАРТ</button>
     </div>
 
-    <div class="player-container" id="mainContainer" style="display:none;">
-        <div class="video-viewport" onclick="togglePlay()">
+    <div class="player-box" id="pBox" style="display:none;">
+        <div class="video-container">
             <div id="yt-player"></div>
-        </div>
-
-        <div class="controls">
-            <div class="progress-bar" onclick="seek(event)">
-                <div class="progress-fill" id="pFill"></div>
-            </div>
-            <div class="btn-row">
-                <button class="btn" id="pBtn">▶</button>
-                <input type="range" min="0" max="100" value="100" oninput="player.setVolume(this.value)">
-                
-                <div id="status" style="font-size: 0.8rem; color: var(--accent)">СИНХРОНИЗАЦИЯ...</div>
-
-                <div class="right">
-                    <select onchange="changeQ(this.value)">
-                        <option value="default">Качество</option>
-                        <option value="hd1080">1080p</option>
-                        <option value="hd720">720p</option>
-                        <option value="medium">360p</option>
-                    </select>
-                    <button class="btn" onclick="fs()">⛶</button>
+            <div class="ui-overlay" onclick="handleTouch(event)">
+                <div class="controls">
+                    <div class="progress-bar" onclick="seek(event)">
+                        <div class="progress-fill" id="pFill"></div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn" onclick="togglePlay()" id="playBtn">▶</button>
+                        <input type="range" min="0" max="100" value="100" oninput="player.setVolume(this.value)">
+                        <div id="status" class="status">ОЖИДАНИЕ...</div>
+                        <div class="right-side">
+                            <button class="btn" onclick="toggleFS()">⛶</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -85,67 +80,83 @@
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
-        let player, subs = [];
+        let player, subs = [], lastText = "";
         const synth = window.speechSynthesis;
 
-        function start() {
-            const id = document.getElementById('url').value.split('v=')[1]?.split('&')[0];
-            if (!id) return;
-            document.getElementById('mainContainer').style.display = 'block';
+        function initApp() {
+            const val = document.getElementById('urlInput').value;
+            const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : val.split('/').pop();
+            document.getElementById('pBox').style.display = 'block';
+            
             if(player) player.loadVideoById(id);
             else {
                 player = new YT.Player('yt-player', {
                     videoId: id,
-                    playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0 },
-                    events: { onReady: () => setInterval(update, 500) }
+                    playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3 },
+                    events: { onReady: () => setInterval(sync, 200) }
                 });
             }
-            fetchSubs(id);
+            loadSubs(id);
         }
 
-        async function fetchSubs(id) {
-            document.getElementById('status').innerText = "ЗАГРУЗКА ДАННЫХ...";
-            const res = await fetch(`/api/get-subs?videoId=${id}`);
-            const data = await res.json();
-            if (data.subtitles) {
-                subs = data.subtitles;
-                document.getElementById('status').innerText = "AI-ДУБЛЯЖ: ГОТОВ";
-            }
+        async function loadSubs(id) {
+            const st = document.getElementById('status');
+            st.innerText = "ПОДКЛЮЧЕНИЕ К РОБОТУ...";
+            try {
+                const r = await fetch(`/api/get-subs?videoId=${id}`);
+                const d = await r.json();
+                if(d.status === "ok") {
+                    subs = d.subtitles;
+                    st.innerText = "AI-ДУБЛЯЖ: АКТИВЕН";
+                    console.log("Субтитры загружены:", subs.length);
+                } else {
+                    st.innerText = "ОШИБКА: " + d.msg;
+                }
+            } catch(e) { st.innerText = "СЕРВЕР НЕДОСТУПЕН"; }
         }
 
-        function update() {
-            if (!player || !player.getCurrentTime) return;
-            const time = player.getCurrentTime();
-            const perc = (time / player.getDuration()) * 100;
-            document.getElementById('pFill').style.width = perc + '%';
+        function sync() {
+            if(!player || !player.getCurrentTime) return;
+            const now = player.getCurrentTime();
             
-            // Пытаемся найти фразу для текущего времени
-            const phrase = subs.find(s => Math.abs(s.start - time) < 0.5);
-            if (phrase && !synth.speaking) {
-                // Тут пока английский, на след. шаге добавим перевод!
-                const u = new SpeechSynthesisUtterance(phrase.text);
-                u.lang = 'en-US'; // Пока читаем оригинал, чтобы проверить звук
-                u.rate = 1.1;
-                synth.speak(u);
+            // Обновляем полоску прогресса
+            document.getElementById('pFill').style.width = (now / player.getDuration() * 100) + '%';
+            
+            // Ищем фразу для озвучки
+            const entry = subs.find(s => now >= s.start && now < s.start + 2);
+            if(entry && entry.text !== lastText) {
+                lastText = entry.text;
+                say(entry.text);
             }
+        }
+
+        function say(txt) {
+            synth.cancel();
+            const u = new SpeechSynthesisUtterance(txt);
+            u.lang = 'en-US'; // Пока читаем оригинал, чтобы убедиться что звук ЕСТЬ
+            u.rate = 1.2;
+            synth.speak(u);
         }
 
         function togglePlay() {
-            if (player.getPlayerState() == 1) player.pauseVideo();
-            else player.playVideo();
+            const s = player.getPlayerState();
+            if(s == 1) { player.pauseVideo(); document.getElementById('playBtn').innerText = '▶'; }
+            else { player.playVideo(); document.getElementById('playBtn').innerText = '⏸'; }
         }
 
-        function fs() {
-            const el = document.getElementById('mainContainer');
-            if (!document.fullscreenElement) el.requestFullscreen();
+        function toggleFS() {
+            const el = document.getElementById('pBox');
+            if(!document.fullscreenElement) el.requestFullscreen();
             else document.exitFullscreen();
         }
 
-        function changeQ(q) { player.setPlaybackQuality(q); }
         function seek(e) {
             const rect = e.currentTarget.getBoundingClientRect();
-            const p = (e.clientX - rect.left) / rect.width;
-            player.seekTo(p * player.getDuration());
+            player.seekTo(((e.clientX - rect.left) / rect.width) * player.getDuration());
+        }
+
+        function handleTouch(e) {
+            if(e.target.classList.contains('ui-overlay')) togglePlay();
         }
     </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceOver AI Pro - Vercel Edition</title>
+    <title>VoiceOver AI Pro - Custom Player</title>
     <style>
         :root {
             --accent: #00f2ff;
@@ -33,10 +33,17 @@
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        #yt-player {
+        .video-wrapper {
             width: 100%;
             aspect-ratio: 16 / 9;
-            pointer-events: none; /* Блокируем клики по самому ютубу */
+            position: relative;
+            cursor: pointer; /* Делаем курсор-руку при наведении на видео */
+        }
+
+        #yt-player {
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Клики ловятся оберткой, а не ютубом */
         }
 
         /* Наша кастомная панель управления */
@@ -53,6 +60,7 @@
             opacity: 0;
             transition: 0.3s;
             z-index: 10;
+            pointer-events: auto;
         }
 
         .player-container:hover .custom-controls { opacity: 1; }
@@ -63,7 +71,6 @@
             background: rgba(255,255,255,0.2);
             border-radius: 5px;
             cursor: pointer;
-            position: relative;
         }
 
         .progress-current {
@@ -71,13 +78,12 @@
             background: var(--accent);
             width: 0%;
             border-radius: 5px;
-            transition: width 0.1s linear;
         }
 
         .buttons {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
         }
 
         .btn {
@@ -85,7 +91,7 @@
             border: none;
             color: white;
             cursor: pointer;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             display: flex;
             align-items: center;
             transition: 0.2s;
@@ -93,7 +99,20 @@
 
         .btn:hover { color: var(--accent); transform: scale(1.1); }
 
-        .volume-slider { width: 90px; accent-color: var(--accent); cursor: pointer; }
+        .volume-slider { width: 80px; accent-color: var(--accent); cursor: pointer; }
+
+        /* Выбор качества */
+        .quality-select {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .quality-select option { background: #111; color: white; }
 
         .status-badge {
             font-size: 0.75rem;
@@ -102,38 +121,19 @@
             padding: 5px 12px;
             border-radius: 6px;
             border: 1px solid var(--accent);
-            margin-left: auto;
             font-weight: bold;
-            letter-spacing: 1px;
         }
 
+        .right-controls { display: flex; align-items: center; gap: 15px; margin-left: auto; }
+
         .main-input {
-            width: 100%;
-            max-width: 600px;
-            margin-bottom: 30px;
-            display: flex;
-            gap: 10px;
-            background: var(--panel);
-            padding: 10px;
-            border-radius: 15px;
+            width: 100%; max-width: 600px; margin-bottom: 30px; display: flex;
+            gap: 10px; background: var(--panel); padding: 10px; border-radius: 15px;
             border: 1px solid rgba(255,255,255,0.05);
         }
 
-        input[type="text"] {
-            flex: 1; background: none; border: none; color: white; outline: none; padding-left: 10px; font-size: 1rem;
-        }
-
-        .load-btn {
-            background: var(--accent);
-            color: black;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .load-btn:hover { filter: brightness(1.2); }
+        input[type="text"] { flex: 1; background: none; border: none; color: white; outline: none; padding-left: 10px; font-size: 1rem; }
+        .load-btn { background: var(--accent); color: black; border: none; padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -146,7 +146,9 @@
     </div>
 
     <div class="player-container" id="container" style="display:none;">
-        <div id="yt-player"></div>
+        <div class="video-wrapper" onclick="togglePlay(event)">
+            <div id="yt-player"></div>
+        </div>
 
         <div class="custom-controls">
             <div class="progress-bar" onclick="seek(event)">
@@ -154,10 +156,21 @@
             </div>
             
             <div class="buttons">
-                <button class="btn" onclick="togglePlay()" id="playBtn">▶</button>
+                <button class="btn" onclick="togglePlay(event)" id="playBtn">▶</button>
                 <input type="range" class="volume-slider" min="0" max="100" value="100" oninput="setVolume(this.value)">
                 
-                <div class="status-badge" id="aiStatus">СИНХРОНИЗАЦИЯ С СЕРВЕРОМ...</div>
+                <div class="status-badge" id="aiStatus">ОЖИДАНИЕ...</div>
+
+                <div class="right-controls">
+                    <select class="quality-select" id="qualitySel" onchange="changeQuality(this.value)">
+                        <option value="default">Авто качество</option>
+                        <option value="hd1080">1080p</option>
+                        <option value="hd720">720p</option>
+                        <option value="large">480p</option>
+                        <option value="medium">360p</option>
+                    </select>
+                    <button class="btn" onclick="toggleFullscreen()">⛶</button>
+                </div>
             </div>
         </div>
     </div>
@@ -171,7 +184,6 @@
 
         function initVoices() {
             const voices = synth.getVoices();
-            // Подбираем четкий мужской голос (если есть Pavel — супер, если нет — любой русский)
             voice = voices.find(v => v.lang.includes('ru') && v.name.includes('Pavel')) || 
                     voices.find(v => v.lang.includes('ru')) || voices[0];
         }
@@ -180,7 +192,7 @@
         function loadVideo() {
             const url = document.getElementById('urlInput').value;
             const id = extractId(url);
-            if(!id) return alert("Бро, это не ссылка на YouTube!");
+            if(!id) return alert("Неверная ссылка");
 
             document.getElementById('container').style.display = 'block';
 
@@ -189,37 +201,20 @@
             } else {
                 player = new YT.Player('yt-player', {
                     videoId: id,
-                    playerVars: {
-                        'autoplay': 1,
-                        'controls': 0, // Выключаем стандартные кнопки ютуба полностью
-                        'modestbranding': 1,
-                        'rel': 0,
-                        'hl': 'ru'
-                    },
-                    events: {
-                        'onReady': onPlayerReady,
-                        'onStateChange': onPlayerStateChange
-                    }
+                    playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1, 'rel': 0, 'hl': 'ru' },
+                    events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
                 });
             }
-
-            // Отправляем сигнал на наш бэкенд Vercel
             askBackendForTranslation(id);
         }
 
         function askBackendForTranslation(id) {
             document.getElementById('aiStatus').innerText = "AI: СКАЧИВАЮ СУБТИТРЫ...";
-            
-            // Запрос к нашему серверному роботу
             fetch(`/api/get-subs?videoId=${id}`)
                 .then(res => res.json())
                 .then(data => {
-                    console.log("Ответ сервера:", data);
-                    document.getElementById('aiStatus').innerText = "AI-ДУБЛЯЖ: АКТИВЕН";
-                    speak("Видео успешно загружено. Робот Vercel подключился к потоку.");
-                })
-                .catch(err => {
-                    document.getElementById('aiStatus').innerText = "ОШИБКА ПОДКЛЮЧЕНИЯ";
+                    document.getElementById('aiStatus').innerText = "AI-ДУБЛЯЖ: ГОТОВ";
+                    speak("Синхронизация звукового потока выполнена.");
                 });
         }
 
@@ -240,17 +235,33 @@
             }
         }
 
-        function togglePlay() {
-            if (!player) return;
+        function togglePlay(e) {
+            // Чтобы клик по кнопкам внутри панели не вызывал паузу
+            if (e.target.closest('.custom-controls')) return;
+            
             const state = player.getPlayerState();
             if (state == 1) player.pauseVideo();
             else player.playVideo();
         }
 
-        function setVolume(val) { if(player) player.setVolume(val); }
+        function setVolume(val) { player.setVolume(val); }
+
+        function changeQuality(value) {
+            if(player && player.setPlaybackQuality) {
+                player.setPlaybackQuality(value);
+            }
+        }
+
+        function toggleFullscreen() {
+            const container = document.getElementById('container');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => alert("Ошибка перехода в полный экран"));
+            } else {
+                document.exitFullscreen();
+            }
+        }
 
         function seek(e) {
-            if(!player) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const perc = x / rect.width;
@@ -261,8 +272,7 @@
             if (synth.speaking) synth.cancel();
             const utter = new SpeechSynthesisUtterance(text);
             utter.voice = voice;
-            utter.pitch = 0.85; // Понижаем тон, чтобы звучало брутальнее и солиднее
-            utter.rate = 1.0;
+            utter.pitch = 0.85;
             synth.speak(utter);
         }
 

@@ -3,282 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceOver AI Pro - Custom Player</title>
+    <title>VoiceOver AI Pro</title>
     <style>
-        :root {
-            --accent: #00f2ff;
-            --bg: #0a0a0c;
-            --panel: rgba(20, 20, 23, 0.95);
-        }
-
-        body {
-            background: var(--bg);
-            color: white;
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-
+        :root { --accent: #00f2ff; --bg: #050505; }
+        body { background: var(--bg); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        
         .player-container {
-            width: 100%;
-            max-width: 1000px;
-            background: #000;
-            border-radius: 24px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            border: 1px solid rgba(255,255,255,0.1);
+            width: 100%; max-width: 1000px; background: #000; border-radius: 20px;
+            position: relative; overflow: hidden; border: 1px solid #222;
         }
 
-        .video-wrapper {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            position: relative;
-            cursor: pointer; /* Делаем курсор-руку при наведении на видео */
+        /* Прячем мусор от YouTube за границы видимости */
+        .video-viewport {
+            position: relative; width: 100%; aspect-ratio: 16/9; overflow: hidden;
         }
-
         #yt-player {
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Клики ловятся оберткой, а не ютубом */
-        }
-
-        /* Наша кастомная панель управления */
-        .custom-controls {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            top: -10%; left: -1%; width: 102%; height: 120%; /* Растягиваем, чтобы скрыть лого и титры Ютуба */
+            pointer-events: none;
+        }
+
+        .controls {
+            position: absolute; bottom: 0; left: 0; right: 0;
             background: linear-gradient(transparent, rgba(0,0,0,0.9));
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            opacity: 0;
-            transition: 0.3s;
-            z-index: 10;
-            pointer-events: auto;
+            padding: 15px 20px; display: flex; flex-direction: column; gap: 10px;
+            opacity: 0; transition: 0.3s; z-index: 100;
         }
+        .player-container:hover .controls { opacity: 1; }
 
-        .player-container:hover .custom-controls { opacity: 1; }
+        .progress-bar { width: 100%; height: 5px; background: #333; cursor: pointer; border-radius: 5px; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 5px; }
 
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 5px;
-            cursor: pointer;
-        }
+        .btn-row { display: flex; align-items: center; gap: 15px; }
+        .btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
+        .btn:hover { color: var(--accent); }
+        
+        .right { margin-left: auto; display: flex; align-items: center; gap: 15px; }
+        select { background: #111; color: white; border: 1px solid #333; padding: 5px; border-radius: 5px; cursor: pointer; }
 
-        .progress-current {
-            height: 100%;
-            background: var(--accent);
-            width: 0%;
-            border-radius: 5px;
-        }
-
-        .buttons {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .btn {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            transition: 0.2s;
-        }
-
-        .btn:hover { color: var(--accent); transform: scale(1.1); }
-
-        .volume-slider { width: 80px; accent-color: var(--accent); cursor: pointer; }
-
-        /* Выбор качества */
-        .quality-select {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.2);
-            padding: 5px 10px;
-            border-radius: 6px;
-            outline: none;
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        .quality-select option { background: #111; color: white; }
-
-        .status-badge {
-            font-size: 0.75rem;
-            background: rgba(0, 242, 255, 0.1);
-            color: var(--accent);
-            padding: 5px 12px;
-            border-radius: 6px;
-            border: 1px solid var(--accent);
-            font-weight: bold;
-        }
-
-        .right-controls { display: flex; align-items: center; gap: 15px; margin-left: auto; }
-
-        .main-input {
-            width: 100%; max-width: 600px; margin-bottom: 30px; display: flex;
-            gap: 10px; background: var(--panel); padding: 10px; border-radius: 15px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        input[type="text"] { flex: 1; background: none; border: none; color: white; outline: none; padding-left: 10px; font-size: 1rem; }
-        .load-btn { background: var(--accent); color: black; border: none; padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .main-input { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 600px; }
+        input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #111; color: white; }
+        .go-btn { background: var(--accent); border: none; padding: 0 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h2 style="letter-spacing: 3px; font-size: 2rem; margin-top: 30px;">VOICEOVER <span style="color:var(--accent)">ULTRA</span></h2>
+    <h2>VOICEOVER <span style="color:var(--accent)">ULTRA</span></h2>
 
     <div class="main-input">
-        <input type="text" id="urlInput" placeholder="Вставь ссылку на видео с YouTube...">
-        <button class="load-btn" onclick="loadVideo()">ЗАГРУЗИТЬ</button>
+        <input type="text" id="url" placeholder="Ссылка на YouTube...">
+        <button class="go-btn" onclick="start()">ЗАПУСТИТЬ</button>
     </div>
 
-    <div class="player-container" id="container" style="display:none;">
-        <div class="video-wrapper" onclick="togglePlay(event)">
+    <div class="player-container" id="mainContainer" style="display:none;">
+        <div class="video-viewport" onclick="togglePlay()">
             <div id="yt-player"></div>
         </div>
 
-        <div class="custom-controls">
+        <div class="controls">
             <div class="progress-bar" onclick="seek(event)">
-                <div class="progress-current" id="progress"></div>
+                <div class="progress-fill" id="pFill"></div>
             </div>
-            
-            <div class="buttons">
-                <button class="btn" onclick="togglePlay(event)" id="playBtn">▶</button>
-                <input type="range" class="volume-slider" min="0" max="100" value="100" oninput="setVolume(this.value)">
+            <div class="btn-row">
+                <button class="btn" id="pBtn">▶</button>
+                <input type="range" min="0" max="100" value="100" oninput="player.setVolume(this.value)">
                 
-                <div class="status-badge" id="aiStatus">ОЖИДАНИЕ...</div>
+                <div id="status" style="font-size: 0.8rem; color: var(--accent)">СИНХРОНИЗАЦИЯ...</div>
 
-                <div class="right-controls">
-                    <select class="quality-select" id="qualitySel" onchange="changeQuality(this.value)">
-                        <option value="default">Авто качество</option>
+                <div class="right">
+                    <select onchange="changeQ(this.value)">
+                        <option value="default">Качество</option>
                         <option value="hd1080">1080p</option>
                         <option value="hd720">720p</option>
-                        <option value="large">480p</option>
                         <option value="medium">360p</option>
                     </select>
-                    <button class="btn" onclick="toggleFullscreen()">⛶</button>
+                    <button class="btn" onclick="fs()">⛶</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://www.youtube.com/iframe_api"></script>
-
     <script>
-        let player;
+        let player, subs = [];
         const synth = window.speechSynthesis;
-        let voice;
 
-        function initVoices() {
-            const voices = synth.getVoices();
-            voice = voices.find(v => v.lang.includes('ru') && v.name.includes('Pavel')) || 
-                    voices.find(v => v.lang.includes('ru')) || voices[0];
-        }
-        window.speechSynthesis.onvoiceschanged = initVoices;
-
-        function loadVideo() {
-            const url = document.getElementById('urlInput').value;
-            const id = extractId(url);
-            if(!id) return alert("Неверная ссылка");
-
-            document.getElementById('container').style.display = 'block';
-
-            if (player) {
-                player.loadVideoById(id);
-            } else {
+        function start() {
+            const id = document.getElementById('url').value.split('v=')[1]?.split('&')[0];
+            if (!id) return;
+            document.getElementById('mainContainer').style.display = 'block';
+            if(player) player.loadVideoById(id);
+            else {
                 player = new YT.Player('yt-player', {
                     videoId: id,
-                    playerVars: { 'autoplay': 1, 'controls': 0, 'modestbranding': 1, 'rel': 0, 'hl': 'ru' },
-                    events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
+                    playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0 },
+                    events: { onReady: () => setInterval(update, 500) }
                 });
             }
-            askBackendForTranslation(id);
+            fetchSubs(id);
         }
 
-        function askBackendForTranslation(id) {
-            document.getElementById('aiStatus').innerText = "AI: СКАЧИВАЮ СУБТИТРЫ...";
-            fetch(`/api/get-subs?videoId=${id}`)
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById('aiStatus').innerText = "AI-ДУБЛЯЖ: ГОТОВ";
-                    speak("Синхронизация звукового потока выполнена.");
-                });
-        }
-
-        function onPlayerReady(event) {
-            setInterval(() => {
-                if(player && player.getCurrentTime) {
-                    const perc = (player.getCurrentTime() / player.getDuration()) * 100;
-                    document.getElementById('progress').style.width = perc + '%';
-                }
-            }, 300);
-        }
-
-        function onPlayerStateChange(event) {
-            if (event.data == YT.PlayerState.PLAYING) {
-                document.getElementById('playBtn').innerText = '⏸';
-            } else {
-                document.getElementById('playBtn').innerText = '▶';
+        async function fetchSubs(id) {
+            document.getElementById('status').innerText = "ЗАГРУЗКА ДАННЫХ...";
+            const res = await fetch(`/api/get-subs?videoId=${id}`);
+            const data = await res.json();
+            if (data.subtitles) {
+                subs = data.subtitles;
+                document.getElementById('status').innerText = "AI-ДУБЛЯЖ: ГОТОВ";
             }
         }
 
-        function togglePlay(e) {
-            // Чтобы клик по кнопкам внутри панели не вызывал паузу
-            if (e.target.closest('.custom-controls')) return;
+        function update() {
+            if (!player || !player.getCurrentTime) return;
+            const time = player.getCurrentTime();
+            const perc = (time / player.getDuration()) * 100;
+            document.getElementById('pFill').style.width = perc + '%';
             
-            const state = player.getPlayerState();
-            if (state == 1) player.pauseVideo();
+            // Пытаемся найти фразу для текущего времени
+            const phrase = subs.find(s => Math.abs(s.start - time) < 0.5);
+            if (phrase && !synth.speaking) {
+                // Тут пока английский, на след. шаге добавим перевод!
+                const u = new SpeechSynthesisUtterance(phrase.text);
+                u.lang = 'en-US'; // Пока читаем оригинал, чтобы проверить звук
+                u.rate = 1.1;
+                synth.speak(u);
+            }
+        }
+
+        function togglePlay() {
+            if (player.getPlayerState() == 1) player.pauseVideo();
             else player.playVideo();
         }
 
-        function setVolume(val) { player.setVolume(val); }
-
-        function changeQuality(value) {
-            if(player && player.setPlaybackQuality) {
-                player.setPlaybackQuality(value);
-            }
+        function fs() {
+            const el = document.getElementById('mainContainer');
+            if (!document.fullscreenElement) el.requestFullscreen();
+            else document.exitFullscreen();
         }
 
-        function toggleFullscreen() {
-            const container = document.getElementById('container');
-            if (!document.fullscreenElement) {
-                container.requestFullscreen().catch(err => alert("Ошибка перехода в полный экран"));
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
+        function changeQ(q) { player.setPlaybackQuality(q); }
         function seek(e) {
             const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const perc = x / rect.width;
-            player.seekTo(perc * player.getDuration());
-        }
-
-        function speak(text) {
-            if (synth.speaking) synth.cancel();
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.voice = voice;
-            utter.pitch = 0.85;
-            synth.speak(utter);
-        }
-
-        function extractId(url) {
-            const reg = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
-            return (url.match(reg) || [])[1];
+            const p = (e.clientX - rect.left) / rect.width;
+            player.seekTo(p * player.getDuration());
         }
     </script>
 </body>

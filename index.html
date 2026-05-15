@@ -3,357 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global VoiceOver - Перевод видео онлайн</title>
+    <title>VoiceOver Pro - Свой плеер</title>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         :root {
-            --bg-color: #0a0a12;
-            --panel-bg: rgba(20, 20, 35, 0.6);
-            --accent-color: #8b5cf6;
-            --accent-hover: #a78bfa;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --glow: 0 0 20px rgba(139, 92, 246, 0.4);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --bg-color: #050505;
+            --accent: #00f2ff;
+            --glass: rgba(255, 255, 255, 0.05);
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background: var(--bg-color);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 2rem 1rem;
-            overflow-x: hidden;
-            background-image: radial-gradient(circle at 50% 0%, #1e1145 0%, var(--bg-color) 70%);
+            padding: 40px 20px;
         }
 
-        .container {
+        .main-card {
             width: 100%;
-            max-width: 1000px;
+            max-width: 900px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        .input-group {
             display: flex;
-            flex-direction: column;
-            gap: 2rem;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 20px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 1rem;
-        }
-
-        header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: -0.05em;
-            background: linear-gradient(to right, #a78bfa, #f472b6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-        }
-
-        header p {
-            color: var(--text-muted);
-            font-size: 1rem;
-        }
-
-        /* Поле ввода */
-        .search-box {
-            position: relative;
-            background: var(--panel-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            padding: 0.5rem;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-
-        .search-box:focus-within {
-            border-color: var(--accent-color);
-            box-shadow: var(--glow);
-            transform: translateY(-2px);
-        }
-
-        .search-box input {
+        input {
             flex: 1;
             background: transparent;
             border: none;
-            outline: none;
-            color: var(--text-main);
-            padding: 0.75rem 1rem;
-            font-size: 1.1rem;
-        }
-
-        .search-box input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .search-box button {
-            background: var(--accent-color);
             color: white;
+            padding: 10px 20px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        button {
+            background: var(--accent);
+            color: black;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-weight: 600;
+            padding: 12px 25px;
+            border-radius: 15px;
+            font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            transition: 0.3s;
         }
 
-        .search-box button:hover {
-            background: var(--accent-hover);
+        button:hover {
+            box-shadow: 0 0 20px var(--accent);
+            transform: scale(1.05);
         }
 
-        .search-box button:active {
-            transform: scale(0.98);
-        }
-
-        /* Видеоплеер */
-        .player-container {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background: #000;
+        /* Контейнер для нашего плеера */
+        .video-wrapper {
             border-radius: 20px;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            background: #000;
             display: none;
-            position: relative;
+            margin-bottom: 20px;
         }
 
-        .player-container iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-
-        .placeholder-player {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background: var(--panel-bg);
-            border: 2px dashed rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-muted);
-            gap: 1rem;
-        }
-
-        .placeholder-player svg {
-            width: 64px;
-            height: 64px;
-            fill: currentColor;
-            opacity: 0.5;
-        }
-
-        /* История просмотров */
-        .history-section {
-            background: var(--panel-bg);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            padding: 1.5rem;
-        }
-
-        .history-section h2 {
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .clear-btn {
-            background: transparent;
-            border: none;
-            color: #ef4444;
-            cursor: pointer;
-            font-size: 0.85rem;
-            opacity: 0.8;
-        }
-
-        .clear-btn:hover {
-            opacity: 1;
-            text-decoration: underline;
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 10px;
+            background: rgba(0, 242, 255, 0.1);
+            color: var(--accent);
+            font-size: 12px;
+            margin-bottom: 15px;
         }
 
         .history-list {
+            margin-top: 30px;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 1rem;
-            list-style: none;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
         }
 
-        .history-item {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 0.75rem;
+        .history-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 15px;
+            padding: 10px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            transition: 0.2s;
         }
 
-        .history-item:hover {
-            background: rgba(139, 92, 246, 0.1);
-            border-color: var(--accent-color);
-            transform: translateY(-2px);
-        }
+        .history-card:hover { background: rgba(255,255,255,0.1); }
 
-        .history-item .thumb {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background: #111;
-            border-radius: 8px;
-            background-size: cover;
-            background-position: center;
-        }
-
-        .history-item .title {
-            font-size: 0.9rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .empty-history {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            font-style: italic;
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 1rem;
-        }
+        .history-card img { width: 100%; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>Global VoiceOver</h1>
-            <p>Вставь ссылку на зарубежное видео и смотри его со встроенным авто-переводом</p>
-        </header>
-
-        <!-- Поле ввода ссылки -->
-        <div class="search-box">
-            <input type="text" id="videoUrl" placeholder="Вставь ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...)">
-            <button onclick="processVideo()">Перевести</button>
+    <div class="main-card">
+        <h2 style="margin-bottom: 20px; letter-spacing: 1px;">VOICEOVER <span style="color:var(--accent)">AI</span></h2>
+        
+        <div class="input-group">
+            <input type="text" id="v-url" placeholder="Вставьте ссылку на YouTube видео...">
+            <button onclick="startApp()">ЗАПУСТИТЬ</button>
         </div>
 
-        <!-- Видеоплеер -->
-        <div class="player-container" id="playerContainer">
-            <iframe id="videoIframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+        <div id="status" class="status-badge" style="display: none;">Голосовой движок активен: Русский (Дубляж)</div>
+
+        <div class="video-wrapper" id="v-wrapper">
+            <div id="player" data-plyr-provider="youtube" data-plyr-embed-id=""></div>
         </div>
 
-        <!-- Заглушка вместо плеера -->
-        <div class="placeholder-player" id="placeholderPlayer">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-            </svg>
-            <p>Плеер готов к работе. Ожидание ссылки...</p>
-        </div>
-
-        <!-- История просмотров -->
-        <div class="history-section">
-            <h2>История просмотров <button class="clear-btn" onclick="clearHistory()">Очистить</button></h2>
-            <ul class="history-list" id="historyList">
-                <!-- Сюда JS добавит элементы -->
-            </ul>
-        </div>
+        <div class="history-list" id="history"></div>
     </div>
 
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', loadHistory);
+        let player;
+        const synth = window.speechSynthesis;
+        let voices = [];
 
-        function extractVideoId(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[2].length === 11) ? match[2] : null;
+        // Инициализация плеера
+        document.addEventListener('DOMContentLoaded', () => {
+            player = new Plyr('#player', {
+                captions: { active: true, update: true, language: 'ru' }
+            });
+            loadHistory();
+            
+            // Грузим голоса для дубляжа
+            window.speechSynthesis.onvoiceschanged = () => {
+                voices = synth.getVoices();
+            };
+        });
+
+        function extractId(url) {
+            const reg = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const m = url.match(reg);
+            return (m && m[2].length === 11) ? m[2] : null;
         }
 
-        function processVideo() {
-            const urlInput = document.getElementById('videoUrl').value.trim();
-            if (!urlInput) return alert('Пожалуйста, введите ссылку!');
+        function startApp() {
+            const url = document.getElementById('v-url').value;
+            const id = extractId(url);
+            if(!id) return alert("Неверная ссылка");
 
-            const videoId = extractVideoId(urlInput);
+            document.getElementById('v-wrapper').style.display = 'block';
+            document.getElementById('status').style.display = 'inline-block';
             
-            if (videoId) {
-                // ИЗМЕНЕНО ТУТ: Используем глобальный Embed YouTube плеер с флагами автоперевода субтитров на русский
-                const globalPlayerUrl = `https://www.youtube.com/embed/${videoId}?cc_load_policy=1&cc_lang_pref=ru&hl=ru`;
-                
-                // Показываем плеер, прячем заглушку
-                document.getElementById('placeholderPlayer').style.display = 'none';
-                const container = document.getElementById('playerContainer');
-                container.style.display = 'block';
-                
-                document.getElementById('videoIframe').src = globalPlayerUrl;
+            // Меняем видео в плеере
+            player.source = {
+                type: 'video',
+                sources: [{ src: id, provider: 'youtube' }]
+            };
 
-                // Сохраняем в историю
-                saveToHistory(videoId, urlInput);
-            } else {
-                alert('Не удалось распознать ссылку. Поддерживаются стандартные ссылки на YouTube.');
-            }
+            saveHistory(id);
+            setupVoiceOver();
         }
 
-        function saveToHistory(id, url) {
-            let history = JSON.parse(localStorage.getItem('videoHistory')) || [];
-            history = history.filter(item => item.id !== id);
-            
-            history.unshift({
-                id: id,
-                url: url,
-                title: `Видео YouTube (${id})`,
-                titleThumb: `https://img.youtube.com/vi/${id}/mqdefault.jpg`
+        // ЛОГИКА ДУБЛЯЖА
+        // Мы слушаем событие появления субтитров и мгновенно их озвучиваем
+        function setupVoiceOver() {
+            player.on('captionsenabled', () => {
+                console.log('Дубляж готов');
             });
 
-            if (history.length > 8) history.pop();
-
-            localStorage.setItem('videoHistory', JSON.stringify(history));
-            loadHistory();
+            // Каждую секунду проверяем текст на экране
+            // Важно: в плеере должны быть включены русские субтитры (автоперевод)
+            setInterval(() => {
+                const captionText = document.querySelector('.plyr__caption');
+                if (captionText && captionText.innerText !== window.lastText) {
+                    window.lastText = captionText.innerText;
+                    speak(window.lastText);
+                }
+            }, 100);
         }
 
-        function loadHistory() {
-            const historyList = document.getElementById('historyList');
-            const history = JSON.parse(localStorage.getItem('videoHistory')) || [];
-
-            if (history.length === 0) {
-                historyList.innerHTML = '<li class="empty-history">История пока пуста</li>';
-                return;
-            }
-
-            historyList.innerHTML = '';
-            history.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'history-item';
-                li.onclick = () => {
-                    document.getElementById('videoUrl').value = item.url;
-                    processVideo();
-                };
-
-                li.innerHTML = `
-                    <div class="thumb" style="background-image: url('${item.titleThumb}')"></div>
-                    <div class="title" title="${item.title}">${item.title}</div>
-                `;
-                historyList.appendChild(li);
-            });
+        function speak(text) {
+            if (synth.speaking) synth.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = voices.find(v => v.lang.includes('ru')) || voices[0];
+            utterance.rate = 1.1; // Чуть быстрее для синхронности
+            utterance.pitch = 1.0;
+            synth.speak(utterance);
         }
 
-        function clearHistory() {
-            localStorage.removeItem('videoHistory');
-            loadHistory();
-        }
-    </script>
-</body>
-</html>
+        // История
+        function saveHistory(id) {
+            let h = JSON.parse(localStorage.getItem('v-hist') || '[]');
+            if(!h.includes(id)) h.unshift(id);
+            localStorage.setItem('v-hist', JSON.stringify(h.slice(0,5

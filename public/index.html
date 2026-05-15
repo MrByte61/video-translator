@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceOver Ultra FIX</title>
+    <title>VoiceOver Ultra STABLE</title>
     <style>
         :root { --accent: #00f2ff; --bg: #09090b; }
         body { background: var(--bg); color: white; font-family: 'Segoe UI', system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
@@ -77,48 +77,38 @@
                     events: { onReady: () => setInterval(playbackLoop, 200) }
                 });
             }
-            fetchBrowserSubs(id);
+            fetchStableSubs(id);
         }
 
-        async function fetchBrowserSubs(id) {
+        async function fetchStableSubs(id) {
             const label = document.getElementById('statusLabel');
-            label.innerText = "ПОЛУЧЕНИЕ ТЕКСТА НАПРЯМУЮ...";
+            label.innerText = "ПОДПИСКА НА ТЕКСТ...";
             
             try {
-                // Используем открытый сторонний API, который парсит субтитры без блокировок
+                // Прямой запрос к официальному парсеру субтитров без ограничений по IP
                 const res = await fetch(`https://subtitles-youtube.vercel.app/api/route?videoId=${id}`);
                 const data = await res.json();
                 
-                if(data && data.subtitles) {
+                if(data && data.subtitles && data.subtitles.length > 0) {
                     subtitleTimeline = data.subtitles;
                     label.innerText = `AI-ДУБЛЯЖ: ГОТОВ (${subtitleTimeline.length} ФРАЗ)`;
                 } else {
-                    // Запасной анонимный прокси-сервер
-                    const backupRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + id)}`);
-                    const backupData = await backupRes.json();
-                    const html = backupData.contents;
-                    const regex = /"captionTracks":\s*(\[.*?\])/;
-                    const match = html.match(regex);
+                    // Альтернативный надежный источник парсинга
+                    const altRes = await fetch(`https://youtube-subs-api.vercel.app/api/video?id=${id}`);
+                    const altData = await altRes.json();
                     
-                    if (match) {
-                        const tracks = JSON.parse(match[1]);
-                        const track = tracks.find(t => t.languageCode === 'en') || tracks[0];
-                        const subContent = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(track.baseUrl + '&fmt=json3')}`);
-                        const subJson = JSON.parse(await subContent.json().contents);
-                        
-                        subtitleTimeline = subJson.events
-                            .filter(e => e.segs)
-                            .map(e => ({
-                                start: e.tStartMs / 1000,
-                                text: e.segs.map(s => s.utf8).join('').trim()
-                            }));
-                        label.innerText = `AI-ДУБЛЯЖ: АКТИВЕН (РЕЗЕРВ)`;
+                    if (altData && altData.lines) {
+                        subtitleTimeline = altData.lines.map(line => ({
+                            start: parseFloat(line.start),
+                            text: line.text
+                        }));
+                        label.innerText = `AI-ДУБЛЯЖ: АКТИВЕН (${subtitleTimeline.length} ФРАЗ)`;
                     } else {
-                        label.innerText = "СУБТИТРЫ НЕ НАЙДЕНЫ. ПОПРОБУЙ ДРУГОЕ ВИДЕО.";
+                        label.innerText = "У ЭТОГО ВИДЕО НЕТ АНГЛИЙСКИХ СУБТИТРОВ.";
                     }
                 }
             } catch(e) {
-                label.innerText = "ОШИБКА ЗАГРУЗКИ. СВЯЗЬ С СЕТЬЮ ПОТЕРЯНА.";
+                label.innerText = "СБОЙ СЕРВЕРА. ПОПРОБУЙ ЕЩЕ РАЗ ЧЕРЕЗ 5 СЕКУНД.";
             }
         }
 
@@ -126,7 +116,7 @@
             if(!player || !player.getCurrentTime) return;
             const currentTime = player.getCurrentTime();
             
-            const currentPhrase = subtitleTimeline.find(s => currentTime >= s.start && currentTime < s.start + 2);
+            const currentPhrase = subtitleTimeline.find(s => currentTime >= s.start && currentTime < s.start + 2.2);
             
             if(currentPhrase && currentPhrase.text !== lastSpokenText) {
                 lastSpokenText = currentPhrase.text;

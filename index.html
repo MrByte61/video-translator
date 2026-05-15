@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VoiceOver - Перевод видео онлайн</title>
+    <title>Global VoiceOver - Перевод видео онлайн</title>
     <style>
         :root {
             --bg-color: #0a0a12;
@@ -62,7 +62,7 @@
             font-size: 1rem;
         }
 
-        /* Поле ввода с анимацией */
+        /* Поле ввода */
         .search-box {
             position: relative;
             background: var(--panel-bg);
@@ -242,8 +242,8 @@
 
     <div class="container">
         <header>
-            <h1>VoiceOver Player</h1>
-            <p>Вставь ссылку на зарубежное видео и смотри его с русской озвучкой</p>
+            <h1>Global VoiceOver</h1>
+            <p>Вставь ссылку на зарубежное видео и смотри его со встроенным авто-переводом</p>
         </header>
 
         <!-- Поле ввода ссылки -->
@@ -252,7 +252,7 @@
             <button onclick="processVideo()">Перевести</button>
         </div>
 
-        <!-- Видеоплеер (скрыт по дефолту) -->
+        <!-- Видеоплеер -->
         <div class="player-container" id="playerContainer">
             <iframe id="videoIframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
         </div>
@@ -275,7 +275,6 @@
     </div>
 
     <script>
-        // При загрузке страницы отображаем историю
         document.addEventListener('DOMContentLoaded', loadHistory);
 
         function extractVideoId(url) {
@@ -291,16 +290,15 @@
             const videoId = extractVideoId(urlInput);
             
             if (videoId) {
-                // Используем открытый плеер-транслятор на базе технологий Яндекса
-                // Он автоматически подхватит перевод по ID видео с YouTube
-                const translatePlayerUrl = `https://browser.yandex.ru/etp/youtube?v=${videoId}`;
+                // ИЗМЕНЕНО ТУТ: Используем глобальный Embed YouTube плеер с флагами автоперевода субтитров на русский
+                const globalPlayerUrl = `https://www.youtube.com/embed/${videoId}?cc_load_policy=1&cc_lang_pref=ru&hl=ru`;
                 
                 // Показываем плеер, прячем заглушку
                 document.getElementById('placeholderPlayer').style.display = 'none';
                 const container = document.getElementById('playerContainer');
                 container.style.display = 'block';
                 
-                document.getElementById('videoIframe').src = translatePlayerUrl;
+                document.getElementById('videoIframe').src = globalPlayerUrl;
 
                 // Сохраняем в историю
                 saveToHistory(videoId, urlInput);
@@ -311,11 +309,8 @@
 
         function saveToHistory(id, url) {
             let history = JSON.parse(localStorage.getItem('videoHistory')) || [];
-            
-            // Проверяем, нет ли уже такого видео в истории
             history = history.filter(item => item.id !== id);
             
-            // Добавляем новое в начало списка
             history.unshift({
                 id: id,
                 url: url,
@@ -323,7 +318,6 @@
                 titleThumb: `https://img.youtube.com/vi/${id}/mqdefault.jpg`
             });
 
-            // Ограничим историю 8 элементами
             if (history.length > 8) history.pop();
 
             localStorage.setItem('videoHistory', JSON.stringify(history));

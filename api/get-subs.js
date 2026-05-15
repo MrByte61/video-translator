@@ -1,28 +1,39 @@
 export default async function handler(req, res) {
   const { videoId } = req.query;
-  if (!videoId) return res.status(400).json({ error: "No videoId" });
+  if (!videoId) return res.status(400).json({ error: "Нет ID видео" });
 
   try {
-    // Пытаемся достать список доступных субтитров
-    const listRes = await fetch(`https://www.youtube.com/api/timedtext?v=${videoId}&type=list`);
-    const listText = await listRes.text();
+    // Пробуем достучаться до субтитров YouTube через официальный шлюз
+    const url = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`;
+    const response = await fetch(url);
     
-    // Если английских субтитров нет в явном виде, пробуем забрать их напрямую
-    const subRes = await fetch(`https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`);
-    
-    if (!subRes.ok) throw new Error("YouTube blocks this request");
+    if (!response.ok) {
+      return res.status(200).json({ 
+        status: "error", 
+        msg: "YouTube заблокировал запрос сервера. Попробуй другое видео." 
+      });
+    }
 
-    const data = await subRes.json();
+    const data = await response.json();
+    
+    // Если субтитров в видео вообще нет (автор не добавил)
+    if (!data.events) {
+      return res.status(200).json({ 
+        status: "error", 
+        msg: "В этом видео нет английских субтитров для перевода." 
+      });
+    }
+
     const subtitles = data.events
       .filter(e => e.segs)
       .map(e => ({
         start: e.tStartMs / 1000,
-        text: e.segs.map(s => s.utf8).join('')
+        text: e.segs.map(s => s.utf8).join(' ')
       }));
 
-    res.status(200).json({ status: "ok", subtitles });
+    return res.status(200).json({ status: "ok", subtitles });
+
   } catch (e) {
-    // Вместо ошибки 500 возвращаем пустой массив, чтобы сайт не «падал»
-    res.status(200).json({ status: "error", subtitles: [], details: e.message });
+    return res.status(200).json({ status: "error", msg: "Ошибка сервера: " + e.message });
   }
 }

@@ -4,74 +4,91 @@
     <meta charset="UTF-8">
     <title>VoiceOver Ultra Pro</title>
     <style>
-        :root { --accent: #00f2ff; --bg: #0a0a0c; }
+        :root { --accent: #00f2ff; --bg: #09090b; }
         body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
         
-        /* Главный контейнер */
+        .main-input { display: flex; gap: 10px; margin: 20px 0 30px 0; width: 100%; max-width: 600px; }
+        input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #27272a; background: #18181b; color: white; outline: none; font-size: 1rem; }
+        .go-btn { background: var(--accent); border: none; padding: 0 25px; border-radius: 12px; font-weight: bold; cursor: pointer; color: black; transition: 0.2s; }
+        .go-btn:hover { filter: brightness(1.1); }
+
+        /* Профессиональный контейнер плеера */
         .player-box {
-            width: 90%; max-width: 1000px; background: #000; border-radius: 20px;
-            position: relative; overflow: hidden; border: 1px solid #222; aspect-ratio: 16/9;
+            width: 100%; max-width: 950px; background: #000; border-radius: 20px;
+            position: relative; overflow: hidden; border: 1px solid #27272a; aspect-ratio: 16/9;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
         }
 
-        /* Чтобы скрыть мусор Ютуба, чуть-чуть масштабируем само видео */
-        .video-container { width: 100%; height: 100%; overflow: hidden; position: relative; }
+        /* Полный экран для API */
+        .player-box:fullscreen { width: 100vw; height: 100vh; max-width: none; border-radius: 0; border: none; }
+
+        .video-wrapper { width: 100%; height: 100%; position: relative; }
+        
+        /* Прячем вотермарки и элементы управления ютуба за края */
         #yt-player { 
-            position: absolute; top: -2px; left: -2px; 
-            width: calc(100% + 4px); height: calc(100% + 4px); 
+            position: absolute; top: -5%; left: -1%; width: 102%; height: 110%; 
             pointer-events: none; 
         }
 
-        .ui-overlay {
-            position: absolute; inset: 0; display: flex; flex-direction: column;
-            background: rgba(0,0,0,0); transition: 0.3s; z-index: 10;
+        /* Интерактивный оверлей для кликов */
+        .click-layer { position: absolute; inset: 0; z-index: 5; cursor: pointer; }
+
+        /* Панель управления */
+        .controls-panel {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.95));
+            padding: 25px 20px 15px 20px; display: flex; flex-direction: column; gap: 12px;
+            opacity: 0; transition: opacity 0.3s; z-index: 10;
         }
-        .ui-overlay:hover { background: rgba(0,0,0,0.3); }
+        .player-box:hover .controls-panel { opacity: 1; }
+        .player-box:fullscreen .controls-panel { bottom: 10px; }
 
-        .controls {
-            margin-top: auto; padding: 20px; opacity: 0; transition: 0.3s;
-            background: linear-gradient(transparent, rgba(0,0,0,0.9));
-        }
-        .ui-overlay:hover .controls { opacity: 1; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.2); cursor: pointer; border-radius: 3px; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 3px; box-shadow: 0 0 8px var(--accent); }
 
-        .progress-bar { width: 100%; height: 6px; background: #333; cursor: pointer; margin-bottom: 15px; }
-        .progress-fill { height: 100%; background: var(--accent); width: 0%; box-shadow: 0 0 10px var(--accent); }
-
-        .btn-row { display: flex; align-items: center; gap: 20px; }
-        .btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem; transition: 0.2s; }
-        .btn:hover { color: var(--accent); transform: scale(1.1); }
+        .row { display: flex; align-items: center; gap: 20px; }
+        .btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.4rem; display: flex; align-items: center; }
+        .btn:hover { color: var(--accent); }
         
-        .status { font-size: 0.8rem; color: var(--accent); font-weight: bold; letter-spacing: 1px; }
-        .right-side { margin-left: auto; display: flex; align-items: center; gap: 15px; }
-
-        .main-input { display: flex; gap: 10px; margin-bottom: 30px; width: 100%; max-width: 600px; }
-        input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #111; color: white; outline: none; }
-        .go { background: var(--accent); border: none; padding: 0 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .volume { width: 90px; accent-color: var(--accent); cursor: pointer; }
+        .status-text { font-size: 0.8rem; color: var(--accent); font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+        .right-menu { margin-left: auto; display: flex; align-items: center; gap: 15px; }
+        
+        select { background: #18181b; color: white; border: 1px solid #27272a; padding: 6px 12px; border-radius: 8px; outline: none; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h1 style="letter-spacing: 5px;">VOICEOVER <span style="color:var(--accent)">ULTRA</span></h1>
+    <h1 style="letter-spacing: 4px; margin-top: 20px; font-size: 1.8rem;">VOICEOVER <span style="color:var(--accent)">ULTRA</span></h1>
 
     <div class="main-input">
-        <input type="text" id="urlInput" placeholder="Вставь ссылку на видео...">
-        <button class="go" onclick="initApp()">СТАРТ</button>
+        <input type="text" id="urlInput" placeholder="Вставь ссылку на англоязычное видео...">
+        <button class="go-btn" onclick="buildPlayer()">ЗАПУСТИТЬ</button>
     </div>
 
-    <div class="player-box" id="pBox" style="display:none;">
-        <div class="video-container">
+    <div class="player-box" id="playerBox" style="display:none;">
+        <div class="video-wrapper">
             <div id="yt-player"></div>
-            <div class="ui-overlay" onclick="handleTouch(event)">
-                <div class="controls">
-                    <div class="progress-bar" onclick="seek(event)">
-                        <div class="progress-fill" id="pFill"></div>
-                    </div>
-                    <div class="btn-row">
-                        <button class="btn" onclick="togglePlay()" id="playBtn">▶</button>
-                        <input type="range" min="0" max="100" value="100" oninput="player.setVolume(this.value)">
-                        <div id="status" class="status">ОЖИДАНИЕ...</div>
-                        <div class="right-side">
-                            <button class="btn" onclick="toggleFS()">⛶</button>
-                        </div>
+            <div class="click-layer" onclick="togglePlayState()"></div>
+            
+            <div class="controls-panel">
+                <div class="progress-bar" onclick="handleTimelineSeek(event)">
+                    <div class="progress-fill" id="pFill"></div>
+                </div>
+                <div class="row">
+                    <button class="btn" onclick="togglePlayState()" id="masterPlayBtn">▶</button>
+                    <input type="range" class="volume" min="0" max="100" value="100" oninput="player.setVolume(this.value)">
+                    
+                    <div id="statusLabel" class="status-text">Ожидание потока...</div>
+
+                    <div class="right-menu">
+                        <select onchange="setVideoQuality(this.value)">
+                            <option value="default">Авто качество</option>
+                            <option value="hd1080">1080p</option>
+                            <option value="hd720">720p</option>
+                            <option value="medium">360p</option>
+                        </select>
+                        <button class="btn" onclick="handleFullscreen()">⛶</button>
                     </div>
                 </div>
             </div>
@@ -80,83 +97,120 @@
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
-        let player, subs = [], lastText = "";
-        const synth = window.speechSynthesis;
+        let player, subtitleTimeline = [], lastSpokenText = "";
+        const speechEngine = window.speechSynthesis;
+        let russianVoice = null;
 
-        function initApp() {
-            const val = document.getElementById('urlInput').value;
-            const id = val.includes('v=') ? val.split('v=')[1].split('&')[0] : val.split('/').pop();
-            document.getElementById('pBox').style.display = 'block';
+        function findBestVoice() {
+            const voices = speechEngine.getVoices();
+            russianVoice = voices.find(v => v.lang.includes('ru') && v.name.includes('Pavel')) || 
+                           voices.find(v => v.lang.includes('ru')) || voices[0];
+        }
+        window.speechSynthesis.onvoiceschanged = findBestVoice;
+
+        function buildPlayer() {
+            const inputData = document.getElementById('urlInput').value;
+            const id = inputData.includes('v=') ? inputData.split('v=')[1].split('&')[0] : inputData.split('/').pop();
+            if(!id) return alert("Неверный URL");
+
+            document.getElementById('playerBox').style.display = 'block';
             
-            if(player) player.loadVideoById(id);
-            else {
+            if(player) {
+                player.loadVideoById(id);
+            } else {
                 player = new YT.Player('yt-player', {
                     videoId: id,
-                    playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3 },
-                    events: { onReady: () => setInterval(sync, 200) }
+                    playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3, disablekb: 1 },
+                    events: { onReady: () => setInterval(playbackLoop, 150) }
                 });
             }
-            loadSubs(id);
+            downloadSubtitles(id);
         }
 
-        async function loadSubs(id) {
-            const st = document.getElementById('status');
-            st.innerText = "ПОДКЛЮЧЕНИЕ К РОБОТУ...";
+        async function downloadSubtitles(id) {
+            const label = document.getElementById('statusLabel');
+            label.innerText = "ПЕРЕХВАТ СУБТИТРОВ...";
+            
             try {
-                const r = await fetch(`/api/get-subs?videoId=${id}`);
-                const d = await r.json();
-                if(d.status === "ok") {
-                    subs = d.subtitles;
-                    st.innerText = "AI-ДУБЛЯЖ: АКТИВЕН";
-                    console.log("Субтитры загружены:", subs.length);
+                const res = await fetch(`/api/get-subs?videoId=${id}`);
+                const data = await res.json();
+                
+                if(data.status === "ok") {
+                    subtitleTimeline = data.subtitles;
+                    label.innerText = `AI-ДУБЛЯЖ: АКТИВЕН (${subtitleTimeline.length} ФРАЗ)`;
                 } else {
-                    st.innerText = "ОШИБКА: " + d.msg;
+                    label.innerText = "ОШИБКА: " + data.msg;
                 }
-            } catch(e) { st.innerText = "СЕРВЕР НЕДОСТУПЕН"; }
-        }
-
-        function sync() {
-            if(!player || !player.getCurrentTime) return;
-            const now = player.getCurrentTime();
-            
-            // Обновляем полоску прогресса
-            document.getElementById('pFill').style.width = (now / player.getDuration() * 100) + '%';
-            
-            // Ищем фразу для озвучки
-            const entry = subs.find(s => now >= s.start && now < s.start + 2);
-            if(entry && entry.text !== lastText) {
-                lastText = entry.text;
-                say(entry.text);
+            } catch(e) {
+                label.innerText = "СБОЙ СВЯЗИ С СЕРВЕРОМ";
             }
         }
 
-        function say(txt) {
-            synth.cancel();
-            const u = new SpeechSynthesisUtterance(txt);
-            u.lang = 'en-US'; // Пока читаем оригинал, чтобы убедиться что звук ЕСТЬ
-            u.rate = 1.2;
-            synth.speak(u);
+        function playbackLoop() {
+            if(!player || !player.getCurrentTime) return;
+            const currentTime = player.getCurrentTime();
+            
+            // Плавное обновление таймлайна
+            document.getElementById('pFill').style.width = (currentTime / player.getDuration() * 100) + '%';
+            
+            // Поиск фразы под текущую секунду
+            const currentPhrase = subtitleTimeline.find(s => currentTime >= s.start && currentTime < s.start + 1.8);
+            
+            if(currentPhrase && currentPhrase.text !== lastSpokenText) {
+                lastSpokenText = currentPhrase.text;
+                translateAndVoiceover(currentPhrase.text);
+            }
         }
 
-        function togglePlay() {
-            const s = player.getPlayerState();
-            if(s == 1) { player.pauseVideo(); document.getElementById('playBtn').innerText = '▶'; }
-            else { player.playVideo(); document.getElementById('playBtn').innerText = '⏸'; }
+        async function translateAndVoiceover(englishText) {
+            try {
+                // Прямой бесплатный CORS-шлюз к Google Translate API
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ru&dt=t&q=${encodeURIComponent(englishText)}`;
+                const response = await fetch(url);
+                const json = await response.json();
+                const russianText = json[0].map(item => item[0]).join('');
+                
+                executeVoice(russianText);
+            } catch (err) {
+                console.error("Ошибка перевода фразы", err);
+            }
         }
 
-        function toggleFS() {
-            const el = document.getElementById('pBox');
-            if(!document.fullscreenElement) el.requestFullscreen();
+        function executeVoice(text) {
+            speechEngine.cancel(); // Глушим предыдущую фразу, чтобы не было наслоения
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = russianVoice;
+            utterance.rate = 1.15; // Слегка ускоряем речь, чтобы укладываться в тайминги
+            utterance.pitch = 0.9;  // Немного баса для солидности
+            speechEngine.speak(utterance);
+        }
+
+        function togglePlayState() {
+            if(player.getPlayerState() == 1) {
+                player.pauseVideo();
+                document.getElementById('masterPlayBtn').innerText = '▶';
+                speechEngine.pause();
+            } else {
+                player.playVideo();
+                document.getElementById('masterPlayBtn').innerText = '⏸';
+                speechEngine.resume();
+            }
+        }
+
+        function handleFullscreen() {
+            const box = document.getElementById('playerBox');
+            if(!document.fullscreenElement) box.requestFullscreen();
             else document.exitFullscreen();
         }
 
-        function seek(e) {
-            const rect = e.currentTarget.getBoundingClientRect();
-            player.seekTo(((e.clientX - rect.left) / rect.width) * player.getDuration());
+        function setVideoQuality(resolution) {
+            if(player && player.setPlaybackQuality) player.setPlaybackQuality(resolution);
         }
 
-        function handleTouch(e) {
-            if(e.target.classList.contains('ui-overlay')) togglePlay();
+        function handleTimelineSeek(e) {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const clickPosition = (e.clientX - rect.left) / rect.width;
+            player.seekTo(clickPosition * player.getDuration());
         }
     </script>
 </body>
